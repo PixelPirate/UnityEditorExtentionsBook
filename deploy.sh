@@ -41,6 +41,6 @@ git commit -m "Rebuild pages at ${rev}"
 git push -q upstream HEAD:gh-pages
 
 echo -e "${CYAN}Deleting temporary files${NC}"
-rm -rf book
+rm -rf ../book
 
 echo -e "${GREEN}Deployement done${NC}"

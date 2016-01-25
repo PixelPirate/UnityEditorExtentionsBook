@@ -66,6 +66,70 @@
 
                 <div id="content" class="content">
                     <h1>Inspector</h1>
+<p>We can change the appeareance of a <code>MonoBehaviour</code> or a <code>ScriptableObject</code> in the inspector by implementing our own <code>Editor</code> for a given type.</p>
+<p><img src="Assets/inspector-example.png" alt="A custom inspector" /></p>
+<p>Lets say we have the following simple behaviour.</p>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class IntroPlayer: MonoBehaviour
+{
+    [SerializeField] private string introURL;
+
+    void Start()
+    {
+        // Play the intro
+    }
+}
+</code></pre>
+<p>We can make a custom editor that could for example give us a button to enable or disable the intro movie, as well as making the text input field larger to make editing longer paths more comfortable.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[CustomEditor(typeof(IntroPlayer))]
+public class IntroPlayerEditor: Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+        var property = serializedObject.FindProperty(&quot;introURL&quot;);
+        EditorGUILayout.LabelField(&quot;Intro URL&quot;);
+        property.stringValue = EditorGUILayout.TextField(property.stringValue, EditorStyles.helpBox);
+        serializedObject.ApplyModifiedProperties();
+
+        EditorGUILayout.Space();
+
+        var introPlayer = target as IntroPlayer;
+        var buttonText = introPlayer.enabled ? &quot;Disable&quot; : &quot;Enable&quot;;
+        if (GUILayout.Button(buttonText))
+        {
+            introPlayer.enabled = !introPlayer.enabled;
+        }
+    }
+}
+</code></pre>
+<p>Put inspector extentions in a <code>Editor</code> folder to avoid problems when building.</p>
+<p>If you only want to add additional UI widgets to the default inspector, you can draw the default UI by calling <code>base.OnInspectorGUI()</code>.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[CustomEditor(typeof(IntroPlayer))]
+public class IntroPlayerEditor: Editor
+{
+    public override void OnInspectorGUI()
+    {
+        base.OnIspectorGUI();
+    
+        var intro = target as IntroPlayer;
+        var buttonText = introPlayer.enabled ? &quot;Disable&quot; : &quot;Enable&quot;;
+        if (GUILayout.Button(buttonText))
+        {
+            intro.enabled = !intro.enabled;
+        }
+                
+        
+    }
+}
+</code></pre>
 
                 </div>
 

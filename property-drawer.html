@@ -66,6 +66,73 @@
 
                 <div id="content" class="content">
                     <h1>Property Drawer</h1>
+<p>Instead of creating a custom editor for a <code>MonoBehavior</code> or a <code>ScriptableObject</code> that replace the default UI completely, you can create a custom editor for a specific type and only fields of that type will use your custom UI, the remaining inspector will still be the default one.</p>
+<p><img src="Assets/property-drawer-wizzard-default.png" alt="Before, using the default Unity editor" />
+<img src="Assets/property-drawer-wizzard-custom.png" alt="After, using a custom property drawer" /></p>
+<p>Lets say we have a custom type that replresents a description for an item</p>
+<pre><code class="language-csharp">[System.Serializable]
+public class Note
+{
+    [SerializeField] private string note;
+}
+</code></pre>
+<p>We would use such a type like so</p>
+<pre><code class="language-csharp">public class Wizzard: MonoBehaviour
+{
+    [SerializeField] private Note beardNote;
+    [SerializeField] private Sprite beardSprite;
+    [SerializeField] private Note spellNote;
+    [SerializeField] private Sprite spellSprite;
+}
+</code></pre>
+<pre><code class="language-csharp">public class Gunslinger: MonoBehaviour
+{
+    [SerializeField] private Note hatNote;
+    [SerializeField] private Sprite hatSprite;
+    [SerializeField] private Note revolverNote;
+    [SerializeField] private Sprite revolverSprite;
+}
+</code></pre>
+<p>If we want to let the the <code>Note</code> stand out a bit every time it is seen in the inspector without creating custom editors for each an every <code>MonoBehaviour</code> or <code>ScriptableObject</code> that uses it, we can use <code>PropertyDrawers</code>.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[CustomPropertyDrawer(typeof(Note))]
+public class NotePropertyDrawer: PropertyDrawer
+{
+   public override float GetPropertyHeight(SerializedProperty property,
+                                           GUIContent label)
+   {
+       return EditorGUIUtility.singleLineHeight * 2f;
+   }
+
+   public override void OnGUI(Rect position,
+                              SerializedProperty property,
+                              GUIContent label)
+   {
+       EditorGUI.BeginChangeCheck();
+
+       var originalColor = GUI.color;
+       GUI.color = Color.yellow;
+
+       var noteProperty = property.FindPropertyRelative(&quot;note&quot;);
+
+       var helpBoxStyle = new GUIStyle(EditorStyles.helpBox);
+
+       var newNoteText = EditorGUI.TextField(position,
+                                             noteProperty.stringValue,
+                                             style: helpBoxStyle);
+
+       GUI.color = originalColor;
+
+       if (EditorGUI.EndChangeCheck())
+       {
+           noteProperty.stringValue = newNoteText;
+       }
+   }
+}
+</code></pre>
+<p>Custom property drawers should be placed inside an <code>Editor</code> folder.</p>
 
                 </div>
 

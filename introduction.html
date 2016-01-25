@@ -66,6 +66,16 @@
 
                 <div id="content" class="content">
                     <h1>Introduction</h1>
+<h2>Layout</h2>
+<p>Most UI widgets are available in an auto layout version, and a version where the user manually sets a rect in whicht to draw the widget.</p>
+<p>Auto layout widgets are in <code>GUILayout.*</code> and <code>EditorGUILayout.*</code>.</p>
+<p>Manual layout widgets are in <code>GUI.*</code> and <code>EditorGUI.*</code>.</p>
+<h2>Styles</h2>
+<p>Editor styles are in <code>UnityEditor.EditorStyles.*</code>, regular runtime styles are in <code>GUI.skins.*</code>.</p>
+<p>Be carefull not to change the default styles, as that would change all uses of that style, even the Unity editor itself. Always make a copy of a style that you cant to change, change the copy and use that copy.</p>
+<pre><code class="language-csharp">var helpBoxStyle = new GUIStyle(EditorStyles.helpBox);
+helpBoxStyle.normal.textColor = Color.blue;
+</code></pre>
 
                 </div>
 

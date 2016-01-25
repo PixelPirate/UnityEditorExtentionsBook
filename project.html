@@ -66,6 +66,104 @@
 
                 <div id="content" class="content">
                     <h1>Project View</h1>
+<p>You can display custom widgets in the Unity project view by adding a callback to the <code>UnityEditor.EditorApplication.projectWindowItemOnGUI</code> event.</p>
+<p><img src="Assets/project-window-favorites.png" alt="Favorites in project window" /></p>
+<p>To look at how to create your own custom windows as pictured below the project view see the chapter about custom windows.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[InitializeOnLoad]
+private class MyProjectViewExtentions
+{
+    private static MyProjectViewExtentions()
+    {
+        EditorApplication.projectWindowItemOnGUI += DrawProjectItem;
+    }
+
+    private static void DrawProjectItem(string guid, Rect selectionRect)
+    {
+        // Your GUI code here.
+    }
+}
+</code></pre>
+<p>The callback function has the signature <code>void Method(string guid, Rect selectionRect)</code> and is called for each item in the project view.</p>
+<p>The following is a larger example, showing the implementation of the favorites pictured above (Sans the &quot;star&quot; assets).</p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using System.Linq;
+using System;
+
+[InitializeOnLoad]
+public class FavoriteBarIcons
+{
+    public static string emptyStar = &quot;X&quot;;
+    public static string star = &quot;*&quot;;
+    public static string ping = &quot;•&quot;;
+    public static List&lt;string&gt; favoritedGUIDs = new List&lt;string&gt;();
+
+    static FavoriteBarIcons()
+    {
+        var data = PlayerPrefs.GetString(&quot;favbar-data&quot;, defaultValue: &quot;&quot;);
+        var GUIDs = data.Split(',').Where(element =&gt; element.Length &gt; 0);
+        favoritedGUIDs.Clear();
+        favoritedGUIDs.AddRange(GUIDs);
+
+        EditorApplication.projectWindowItemOnGUI += DrawProjectItem;
+    }
+
+    private static void DrawProjectItem(string guid, Rect selectionRect)
+    {
+        var frame = new Rect(selectionRect);
+        frame.x += frame.width - 20f;
+        frame.width = 18f;
+
+        if (favoritedGUIDs.Contains(guid))
+        {
+            if (GUI.Button(frame, star, GUI.skin.label))
+            {
+                RemoveFavorite(guid);
+            }
+        }
+        else if (selectionRect.Contains(Event.current.mousePosition))
+        {
+            if (GUI.Button(frame, emptyStar, GUI.skin.label))
+            {
+                AddFavorite(guid);
+            }
+        }
+    }
+
+    public static void AddFavorite(string GUID)
+    {
+        favoritedGUIDs.Add(GUID);
+        var data = string.Join(&quot;,&quot;, favoritedGUIDs.ToArray());
+        PlayerPrefs.SetString(&quot;favbar-data&quot;, data);
+        PlayerPrefs.Save();
+
+        if (FavoriteBarEditor.IsOpen)
+        {
+            var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;, focus: false);
+            window.Repaint();
+        }
+    }
+
+    public static void RemoveFavorite(string GUID)
+    {
+        favoritedGUIDs.Remove(GUID);
+        var data = string.Join(&quot;,&quot;, favoritedGUIDs.ToArray());
+        PlayerPrefs.SetString(&quot;favbar-data&quot;, data);
+        PlayerPrefs.Save();
+
+        if (FavoriteBarEditor.IsOpen)
+        {
+            var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;, focus: false);
+            window.Repaint();
+        }
+        EditorApplication.RepaintProjectWindow();
+    }
+}
+</code></pre>
 
                 </div>
 

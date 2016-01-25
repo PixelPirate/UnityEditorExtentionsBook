@@ -66,14 +66,546 @@
 
                 <div id="content" class="content">
                     <h1>Introduction</h1>
+<h2>Layout</h2>
+<p>Most UI widgets are available in an auto layout version, and a version where the user manually sets a rect in whicht to draw the widget.</p>
+<p>Auto layout widgets are in <code>GUILayout.*</code> and <code>EditorGUILayout.*</code>.</p>
+<p>Manual layout widgets are in <code>GUI.*</code> and <code>EditorGUI.*</code>.</p>
+<h2>Styles</h2>
+<p>Editor styles are in <code>UnityEditor.EditorStyles.*</code>, regular runtime styles are in <code>GUI.skins.*</code>.</p>
+<p>Be carefull not to change the default styles, as that would change all uses of that style, even the Unity editor itself. Always make a copy of a style that you cant to change, change the copy and use that copy.</p>
+<pre><code class="language-csharp">var helpBoxStyle = new GUIStyle(EditorStyles.helpBox);
+helpBoxStyle.normal.textColor = Color.blue;
+</code></pre>
 <h1>Inspector</h1>
+<p>We can change the appeareance of a <code>MonoBehaviour</code> or a <code>ScriptableObject</code> in the inspector by implementing our own <code>Editor</code> for a given type.</p>
+<p><img src="Assets/inspector-example.png" alt="A custom inspector" /></p>
+<p>Lets say we have the following simple behaviour.</p>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class IntroPlayer: MonoBehaviour
+{
+    [SerializeField] private string introURL;
+
+    void Start()
+    {
+        // Play the intro
+    }
+}
+</code></pre>
+<p>We can make a custom editor that could for example give us a button to enable or disable the intro movie, as well as making the text input field larger to make editing longer paths more comfortable.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[CustomEditor(typeof(IntroPlayer))]
+public class IntroPlayerEditor: Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+        var property = serializedObject.FindProperty(&quot;introURL&quot;);
+        EditorGUILayout.LabelField(&quot;Intro URL&quot;);
+        property.stringValue = EditorGUILayout.TextField(property.stringValue, EditorStyles.helpBox);
+        serializedObject.ApplyModifiedProperties();
+
+        EditorGUILayout.Space();
+
+        var introPlayer = target as IntroPlayer;
+        var buttonText = introPlayer.enabled ? &quot;Disable&quot; : &quot;Enable&quot;;
+        if (GUILayout.Button(buttonText))
+        {
+            introPlayer.enabled = !introPlayer.enabled;
+        }
+    }
+}
+</code></pre>
+<p>Put inspector extentions in a <code>Editor</code> folder to avoid problems when building.</p>
+<p>If you only want to add additional UI widgets to the default inspector, you can draw the default UI by calling <code>base.OnInspectorGUI()</code>.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[CustomEditor(typeof(IntroPlayer))]
+public class IntroPlayerEditor: Editor
+{
+    public override void OnInspectorGUI()
+    {
+        base.OnIspectorGUI();
+    
+        var intro = target as IntroPlayer;
+        var buttonText = introPlayer.enabled ? &quot;Disable&quot; : &quot;Enable&quot;;
+        if (GUILayout.Button(buttonText))
+        {
+            intro.enabled = !intro.enabled;
+        }
+                
+        
+    }
+}
+</code></pre>
 <h1>Property Drawer</h1>
+<p>Instead of creating a custom editor for a <code>MonoBehavior</code> or a <code>ScriptableObject</code> that replace the default UI completely, you can create a custom editor for a specific type and only fields of that type will use your custom UI, the remaining inspector will still be the default one.</p>
+<p><img src="Assets/property-drawer-wizzard-default.png" alt="Before, using the default Unity editor" />
+<img src="Assets/property-drawer-wizzard-custom.png" alt="After, using a custom property drawer" /></p>
+<p>Lets say we have a custom type that replresents a description for an item</p>
+<pre><code class="language-csharp">[System.Serializable]
+public class Note
+{
+    [SerializeField] private string note;
+}
+</code></pre>
+<p>We would use such a type like so</p>
+<pre><code class="language-csharp">public class Wizzard: MonoBehaviour
+{
+    [SerializeField] private Note beardNote;
+    [SerializeField] private Sprite beardSprite;
+    [SerializeField] private Note spellNote;
+    [SerializeField] private Sprite spellSprite;
+}
+</code></pre>
+<pre><code class="language-csharp">public class Gunslinger: MonoBehaviour
+{
+    [SerializeField] private Note hatNote;
+    [SerializeField] private Sprite hatSprite;
+    [SerializeField] private Note revolverNote;
+    [SerializeField] private Sprite revolverSprite;
+}
+</code></pre>
+<p>If we want to let the the <code>Note</code> stand out a bit every time it is seen in the inspector without creating custom editors for each an every <code>MonoBehaviour</code> or <code>ScriptableObject</code> that uses it, we can use <code>PropertyDrawers</code>.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[CustomPropertyDrawer(typeof(Note))]
+public class NotePropertyDrawer: PropertyDrawer
+{
+   public override float GetPropertyHeight(SerializedProperty property,
+                                           GUIContent label)
+   {
+       return EditorGUIUtility.singleLineHeight * 2f;
+   }
+
+   public override void OnGUI(Rect position,
+                              SerializedProperty property,
+                              GUIContent label)
+   {
+       EditorGUI.BeginChangeCheck();
+
+       var originalColor = GUI.color;
+       GUI.color = Color.yellow;
+
+       var noteProperty = property.FindPropertyRelative(&quot;note&quot;);
+
+       var helpBoxStyle = new GUIStyle(EditorStyles.helpBox);
+
+       var newNoteText = EditorGUI.TextField(position,
+                                             noteProperty.stringValue,
+                                             style: helpBoxStyle);
+
+       GUI.color = originalColor;
+
+       if (EditorGUI.EndChangeCheck())
+       {
+           noteProperty.stringValue = newNoteText;
+       }
+   }
+}
+</code></pre>
+<p>Custom property drawers should be placed inside an <code>Editor</code> folder.</p>
 <h1>Component Context Menu</h1>
+<p>You can put your own functionallity in the context menu of components inspector. This menu is either reachable by a right click on an empty space in an components inspector area or by clicking on the gear icon in the upper right.</p>
+<p><img src="Assets/context-menu-example.png" alt="Custom context menu" /></p>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class MyBehaviour: MonoBehaviour
+{
+    [ContextMenu(&quot;Toggle enabled state&quot;)]
+    public void ToggleEnableState()
+    {
+        enabled = !enabled;
+    }
+}
+</code></pre>
+<p>This can be usefull if you want to trigger some gameplay events while being in the Unity editor play mode.</p>
 <h1>Menu Bar</h1>
+<p>You can put your own entries in the unity menu bar. Some paths have special meaning though, like the <code>Assets/Create/</code> path, where items in that path are also displayed in the <code>Create</code> section of the hierarchy view context menu.</p>
+<p><img src="Assets/menu-item-example.png" alt="Menu item example" /></p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+public static class MyMenuFunctionality
+{
+    [MenuItem(&quot;Assets/Create/Funny GameObject&quot;)]
+    private static void CreateFunnyGameObject()
+    {
+        var gameObject = new GameObject(&quot;I'm fun.&quot;);
+        gameObject.transform.position = Vector3.zero;
+    }
+}
+</code></pre>
 <h1>Windows</h1>
+<p>Put editor window scripts in a folder called <code>Editor</code> to avoid build issues</p>
+<h2>Dockable Windows</h2>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+public class MyEditorWindow: EditorWindow
+{
+    void OnGUI()
+    {
+        // Your GUI code
+    }
+}
+</code></pre>
+<p>Opening a custom window can be done with <code>EditorWindow.GetWindow</code></p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+public static class WindowOpener
+{
+    [MenuItem(&quot;Window/MyWindow&quot;)]
+    private static void Open()
+    {
+        var window = EditorWindow.GetWindow&lt;MyEditorWindow&gt;();
+        window.Show();
+    }
+}
+</code></pre>
+<p>Of course you can also put the afore mentioned <code>Open</code> method inside your custom <code>EditorWindow</code> class.</p>
+<p>The following is an comprehensive example building on top of the favorites example from the custom project view chapter.</p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using System;
+
+public class FavoriteBarEditor: EditorWindow
+{
+    private string searchString = &quot;&quot;;
+    private string filter;
+
+    public static bool IsOpen
+    {
+        get;
+        private set;
+    }
+
+    List&lt;string&gt; Types(List&lt;string&gt; GUIDs)
+    {
+        List&lt;string&gt; types = new List&lt;string&gt;();
+        foreach (var GUID in GUIDs)
+        {
+            var path = AssetDatabase.GUIDToAssetPath(GUID);
+            var elementObject = AssetDatabase.LoadAssetAtPath&lt;UnityEngine.Object&gt;(path);
+            var typeName = elementObject.GetType().Name;
+
+            if (!types.Contains(typeName))
+            {
+                types.Add(typeName);
+            }
+        }
+
+        return types;
+    }
+
+    void HandleMenuFunction(object userData)
+    {
+        filter = (string)userData;
+    }
+
+    void OnGUI()
+    {
+        GUILayout.BeginHorizontal(EditorStyles.toolbar);
+
+        var typeNames = Types(FavoriteBarIcons.favoritedGUIDs);
+        if (GUILayout.Button(&quot;Filter&quot;, GUI.skin.FindStyle(&quot;ToolbarButton&quot;)))
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent(&quot;All&quot;),
+                         on: string.IsNullOrEmpty(filter),
+                         func: HandleMenuFunction,
+                         userData: null);
+            menu.AddSeparator(string.Empty);
+            foreach (var name in typeNames)
+            {
+                menu.AddItem(new GUIContent(name),
+                             on: name == filter,
+                             func: HandleMenuFunction,
+                             userData: name);
+            }
+            menu.ShowAsContext();
+        }
+
+        GUILayout.FlexibleSpace();
+        searchString = GUILayout.TextField(searchString,
+                                           GUI.skin.FindStyle(&quot;ToolbarSeachTextField&quot;),
+                                           GUILayout.MinWidth(100f));
+        if (GUILayout.Button(&quot;&quot;, GUI.skin.FindStyle(&quot;ToolbarSeachCancelButton&quot;)))
+        {
+            searchString = &quot;&quot;;
+            GUI.FocusControl(null);
+        }
+
+        GUILayout.EndHorizontal();
+
+        var deletionElements = new List&lt;string&gt;();
+
+        foreach (var element in FavoriteBarIcons.favoritedGUIDs)
+        {
+            var path = AssetDatabase.GUIDToAssetPath(element);
+            var elementObject = AssetDatabase.LoadAssetAtPath&lt;UnityEngine.Object&gt;(path);
+
+            if ((!elementObject.name.ToLowerInvariant().Contains(searchString.ToLowerInvariant())
+                &amp;&amp; !string.IsNullOrEmpty(searchString))
+                ||
+                (!string.IsNullOrEmpty(filter)
+                &amp;&amp; elementObject.GetType().Name != filter))
+            {
+                continue;
+            }
+
+            var content = EditorGUIUtility.ObjectContent(elementObject,
+                                                         elementObject.GetType());
+
+            var bounds = GUILayoutUtility.GetRect(content,
+                                                  GUI.skin.label,
+                                                  GUILayout.MaxHeight(16f));
+            var buttonFrame = new Rect(bounds);
+            buttonFrame.width -= 40f;
+
+            if (Selection.activeObject == elementObject)
+            {
+                GUI.Box(bounds, &quot;&quot;, GUI.skin.box);
+            }
+
+            if (GUI.Button(buttonFrame, content, GUI.skin.label))
+            {
+                Selection.activeObject = elementObject;
+                EditorGUIUtility.PingObject(elementObject);
+            }
+
+            var starRect = new Rect(bounds);
+            starRect.x += starRect.width - 20f;
+            starRect.width = 18f;
+
+            if (GUI.Button(starRect, FavoriteBarIcons.emptyStar))
+            {
+                deletionElements.Add(element);
+            }
+
+            var pingRect = new Rect(bounds);
+            pingRect.x += pingRect.width - 40f;
+            pingRect.width = 18f;
+
+            if (GUI.Button(pingRect, FavoriteBarIcons.ping))
+            {
+                EditorGUIUtility.PingObject(elementObject);
+            }
+        }
+
+        foreach (var element in deletionElements)
+        {
+            FavoriteBarIcons.RemoveFavorite(element);
+        }
+    }
+
+    void OnSelectionChange()
+    {
+        if (FavoriteBarEditor.IsOpen)
+        {
+            var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;, focus: false);
+            window.Repaint();
+        }
+    }
+
+    [MenuItem(&quot;Window/Favorites&quot;)]
+    static public void ShowWindow()
+    {
+        var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;);
+        window.Show();
+    }
+
+    void OnEnable()
+    {
+        IsOpen = true;
+    }
+
+    void OnDisable()
+    {
+       IsOpen = false;
+    }
+}
+</code></pre>
+<p><img src="Assets/project-window-favorites.png" alt="Favorites in project window" /></p>
+<h2>Window styles</h2>
+<p>There are different styles that you can your windows as. The default style, shown above, is a resizable window that can be dragged arount and docked into the Unity editor like the inspetor or scene view.</p>
+<p>The different styles can be choosen replacing <code>window.Show()</code> from the above example with one of the follwing:</p>
+<ul>
+<li><code>Show()</code> --- Dockable window.</li>
+<li><code>ShowAsDropDown(Rect buttonRect, Vector2 windowSize)</code> --- Window will be displayed next to a specified area (like a button). Like the browser that opens when you click &quot;Add Component&quot; in the inspector.</li>
+<li><code>ShowAuxWindow()</code></li>
+<li><code>ShowPopup()</code> --- A window without frame, can't be resized or dragged.</li>
+<li><code>ShowUtility()</code> --- Resizable, dragable window. Not dockable. Invisible when not in foreground. Like the color picker.</li>
+</ul>
 <h1>Preferences</h1>
+<p>You can add your own settings tab in the unity preferences dialog. This is the right place to store settings for your custom Unity editor extentions.</p>
+<p><img src="Assets/preferences-example.png" alt="Custom Unity preferences" /></p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+public static class MyPreferences
+{
+    [PreferenceItem(&quot;My Preferences&quot;)]
+    private static void OnPreferencesGUI()
+    {
+        GUILayout.Label(&quot;My Preferences&quot;);
+
+        var preference = EditorPrefs.GetBool(&quot;MyPreferecesPreference&quot;, defaultValue: false);
+        preference = EditorGUILayout.Toggle(label: &quot;Preference&quot;, value: preference);
+        EditorPrefs.SetBool(&quot;MyPreferecesPreference&quot;, preference);
+    }
+}
+
+</code></pre>
+<p>Appart from using <code>EditorPrefs</code> you can also store your custom settings in an asset with an <code>ScriptableObject</code>. Keep in mind that the settings you edit inside an preference UI should only be for editor tools, like for example when you make a custom build extention for unity that lets you do special stuff when building a game. The advantage of using <code>EditorPrefs</code> is that your settings will be shared will all projects for your editor. Like all the other settings in the preference window.</p>
+<p>You should not put gameplay specific things in a preference UI.</p>
 <h1>Scene Hierarchy View</h1>
+<p>You can customize the scene hierarchy view in the same way as the project view by registering a callback to <code>UnityEditor.EditorApplication.hierarchyWindowItemOnGUI</code>.</p>
+<p><img src="Assets/hierarchy-window-favorites.png" alt="Hierarchy window favorites" /></p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+
+[InitializeOnLoad]
+private class MyProjectViewExtentions
+{
+    private static List&lt;int&gt; favoriteInstances = new List&lt;int&gt;();
+    
+    private static MyProjectViewExtentions()
+    {
+        EditorApplication.hierarchyWindowItemOnGUI += DrawHierarchyItem;
+    }
+
+    private static void DrawHierarchyItem(int instanceID, Rect selectionRect)
+   {
+        Rect frame = new Rect(selectionRect);
+        {
+            frame.x += frame.width - 20f;
+            frame.width = 18f;
+        }
+
+        if (favoriteInstances.Contains(instanceID))
+        {
+            if (GUI.Button(frame, &quot;♥︎&quot;, GUI.skin.label))
+            {
+                favoriteInstances.Remove.Remove(instanceID);
+            }
+        }
+        else if (selectionRect.Contains(Event.current.mousePosition))
+        {
+            if (GUI.Button(frame, &quot;♡️&quot;, GUI.skin.label))
+            {
+                favoriteInstances.Add(instanceID);
+            }
+        }
+    }
+}
+</code></pre>
 <h1>Project View</h1>
+<p>You can display custom widgets in the Unity project view by adding a callback to the <code>UnityEditor.EditorApplication.projectWindowItemOnGUI</code> event.</p>
+<p><img src="Assets/project-window-favorites.png" alt="Favorites in project window" /></p>
+<p>To look at how to create your own custom windows as pictured below the project view see the chapter about custom windows.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+[InitializeOnLoad]
+private class MyProjectViewExtentions
+{
+    private static MyProjectViewExtentions()
+    {
+        EditorApplication.projectWindowItemOnGUI += DrawProjectItem;
+    }
+
+    private static void DrawProjectItem(string guid, Rect selectionRect)
+    {
+        // Your GUI code here.
+    }
+}
+</code></pre>
+<p>The callback function has the signature <code>void Method(string guid, Rect selectionRect)</code> and is called for each item in the project view.</p>
+<p>The following is a larger example, showing the implementation of the favorites pictured above (Sans the &quot;star&quot; assets).</p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using System.Linq;
+using System;
+
+[InitializeOnLoad]
+public class FavoriteBarIcons
+{
+    public static string emptyStar = &quot;X&quot;;
+    public static string star = &quot;*&quot;;
+    public static string ping = &quot;•&quot;;
+    public static List&lt;string&gt; favoritedGUIDs = new List&lt;string&gt;();
+
+    static FavoriteBarIcons()
+    {
+        var data = PlayerPrefs.GetString(&quot;favbar-data&quot;, defaultValue: &quot;&quot;);
+        var GUIDs = data.Split(',').Where(element =&gt; element.Length &gt; 0);
+        favoritedGUIDs.Clear();
+        favoritedGUIDs.AddRange(GUIDs);
+
+        EditorApplication.projectWindowItemOnGUI += DrawProjectItem;
+    }
+
+    private static void DrawProjectItem(string guid, Rect selectionRect)
+    {
+        var frame = new Rect(selectionRect);
+        frame.x += frame.width - 20f;
+        frame.width = 18f;
+
+        if (favoritedGUIDs.Contains(guid))
+        {
+            if (GUI.Button(frame, star, GUI.skin.label))
+            {
+                RemoveFavorite(guid);
+            }
+        }
+        else if (selectionRect.Contains(Event.current.mousePosition))
+        {
+            if (GUI.Button(frame, emptyStar, GUI.skin.label))
+            {
+                AddFavorite(guid);
+            }
+        }
+    }
+
+    public static void AddFavorite(string GUID)
+    {
+        favoritedGUIDs.Add(GUID);
+        var data = string.Join(&quot;,&quot;, favoritedGUIDs.ToArray());
+        PlayerPrefs.SetString(&quot;favbar-data&quot;, data);
+        PlayerPrefs.Save();
+
+        if (FavoriteBarEditor.IsOpen)
+        {
+            var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;, focus: false);
+            window.Repaint();
+        }
+    }
+
+    public static void RemoveFavorite(string GUID)
+    {
+        favoritedGUIDs.Remove(GUID);
+        var data = string.Join(&quot;,&quot;, favoritedGUIDs.ToArray());
+        PlayerPrefs.SetString(&quot;favbar-data&quot;, data);
+        PlayerPrefs.Save();
+
+        if (FavoriteBarEditor.IsOpen)
+        {
+            var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;, focus: false);
+            window.Repaint();
+        }
+        EditorApplication.RepaintProjectWindow();
+    }
+}
+</code></pre>
 
                 </div>
 

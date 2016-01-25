@@ -66,6 +66,47 @@
 
                 <div id="content" class="content">
                     <h1>Scene Hierarchy View</h1>
+<p>You can customize the scene hierarchy view in the same way as the project view by registering a callback to <code>UnityEditor.EditorApplication.hierarchyWindowItemOnGUI</code>.</p>
+<p><img src="Assets/hierarchy-window-favorites.png" alt="Hierarchy window favorites" /></p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+
+[InitializeOnLoad]
+private class MyProjectViewExtentions
+{
+    private static List&lt;int&gt; favoriteInstances = new List&lt;int&gt;();
+    
+    private static MyProjectViewExtentions()
+    {
+        EditorApplication.hierarchyWindowItemOnGUI += DrawHierarchyItem;
+    }
+
+    private static void DrawHierarchyItem(int instanceID, Rect selectionRect)
+   {
+        Rect frame = new Rect(selectionRect);
+        {
+            frame.x += frame.width - 20f;
+            frame.width = 18f;
+        }
+
+        if (favoriteInstances.Contains(instanceID))
+        {
+            if (GUI.Button(frame, &quot;♥︎&quot;, GUI.skin.label))
+            {
+                favoriteInstances.Remove.Remove(instanceID);
+            }
+        }
+        else if (selectionRect.Contains(Event.current.mousePosition))
+        {
+            if (GUI.Button(frame, &quot;♡️&quot;, GUI.skin.label))
+            {
+                favoriteInstances.Add(instanceID);
+            }
+        }
+    }
+}
+</code></pre>
 
                 </div>
 

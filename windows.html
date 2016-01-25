@@ -66,6 +66,208 @@
 
                 <div id="content" class="content">
                     <h1>Windows</h1>
+<p>Put editor window scripts in a folder called <code>Editor</code> to avoid build issues</p>
+<h2>Dockable Windows</h2>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+public class MyEditorWindow: EditorWindow
+{
+    void OnGUI()
+    {
+        // Your GUI code
+    }
+}
+</code></pre>
+<p>Opening a custom window can be done with <code>EditorWindow.GetWindow</code></p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEditor;
+
+public static class WindowOpener
+{
+    [MenuItem(&quot;Window/MyWindow&quot;)]
+    private static void Open()
+    {
+        var window = EditorWindow.GetWindow&lt;MyEditorWindow&gt;();
+        window.Show();
+    }
+}
+</code></pre>
+<p>Of course you can also put the afore mentioned <code>Open</code> method inside your custom <code>EditorWindow</code> class.</p>
+<p>The following is an comprehensive example building on top of the favorites example from the custom project view chapter.</p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using System;
+
+public class FavoriteBarEditor: EditorWindow
+{
+    private string searchString = &quot;&quot;;
+    private string filter;
+
+    public static bool IsOpen
+    {
+        get;
+        private set;
+    }
+
+    List&lt;string&gt; Types(List&lt;string&gt; GUIDs)
+    {
+        List&lt;string&gt; types = new List&lt;string&gt;();
+        foreach (var GUID in GUIDs)
+        {
+            var path = AssetDatabase.GUIDToAssetPath(GUID);
+            var elementObject = AssetDatabase.LoadAssetAtPath&lt;UnityEngine.Object&gt;(path);
+            var typeName = elementObject.GetType().Name;
+
+            if (!types.Contains(typeName))
+            {
+                types.Add(typeName);
+            }
+        }
+
+        return types;
+    }
+
+    void HandleMenuFunction(object userData)
+    {
+        filter = (string)userData;
+    }
+
+    void OnGUI()
+    {
+        GUILayout.BeginHorizontal(EditorStyles.toolbar);
+
+        var typeNames = Types(FavoriteBarIcons.favoritedGUIDs);
+        if (GUILayout.Button(&quot;Filter&quot;, GUI.skin.FindStyle(&quot;ToolbarButton&quot;)))
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent(&quot;All&quot;),
+                         on: string.IsNullOrEmpty(filter),
+                         func: HandleMenuFunction,
+                         userData: null);
+            menu.AddSeparator(string.Empty);
+            foreach (var name in typeNames)
+            {
+                menu.AddItem(new GUIContent(name),
+                             on: name == filter,
+                             func: HandleMenuFunction,
+                             userData: name);
+            }
+            menu.ShowAsContext();
+        }
+
+        GUILayout.FlexibleSpace();
+        searchString = GUILayout.TextField(searchString,
+                                           GUI.skin.FindStyle(&quot;ToolbarSeachTextField&quot;),
+                                           GUILayout.MinWidth(100f));
+        if (GUILayout.Button(&quot;&quot;, GUI.skin.FindStyle(&quot;ToolbarSeachCancelButton&quot;)))
+        {
+            searchString = &quot;&quot;;
+            GUI.FocusControl(null);
+        }
+
+        GUILayout.EndHorizontal();
+
+        var deletionElements = new List&lt;string&gt;();
+
+        foreach (var element in FavoriteBarIcons.favoritedGUIDs)
+        {
+            var path = AssetDatabase.GUIDToAssetPath(element);
+            var elementObject = AssetDatabase.LoadAssetAtPath&lt;UnityEngine.Object&gt;(path);
+
+            if ((!elementObject.name.ToLowerInvariant().Contains(searchString.ToLowerInvariant())
+                &amp;&amp; !string.IsNullOrEmpty(searchString))
+                ||
+                (!string.IsNullOrEmpty(filter)
+                &amp;&amp; elementObject.GetType().Name != filter))
+            {
+                continue;
+            }
+
+            var content = EditorGUIUtility.ObjectContent(elementObject,
+                                                         elementObject.GetType());
+
+            var bounds = GUILayoutUtility.GetRect(content,
+                                                  GUI.skin.label,
+                                                  GUILayout.MaxHeight(16f));
+            var buttonFrame = new Rect(bounds);
+            buttonFrame.width -= 40f;
+
+            if (Selection.activeObject == elementObject)
+            {
+                GUI.Box(bounds, &quot;&quot;, GUI.skin.box);
+            }
+
+            if (GUI.Button(buttonFrame, content, GUI.skin.label))
+            {
+                Selection.activeObject = elementObject;
+                EditorGUIUtility.PingObject(elementObject);
+            }
+
+            var starRect = new Rect(bounds);
+            starRect.x += starRect.width - 20f;
+            starRect.width = 18f;
+
+            if (GUI.Button(starRect, FavoriteBarIcons.emptyStar))
+            {
+                deletionElements.Add(element);
+            }
+
+            var pingRect = new Rect(bounds);
+            pingRect.x += pingRect.width - 40f;
+            pingRect.width = 18f;
+
+            if (GUI.Button(pingRect, FavoriteBarIcons.ping))
+            {
+                EditorGUIUtility.PingObject(elementObject);
+            }
+        }
+
+        foreach (var element in deletionElements)
+        {
+            FavoriteBarIcons.RemoveFavorite(element);
+        }
+    }
+
+    void OnSelectionChange()
+    {
+        if (FavoriteBarEditor.IsOpen)
+        {
+            var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;, focus: false);
+            window.Repaint();
+        }
+    }
+
+    [MenuItem(&quot;Window/Favorites&quot;)]
+    static public void ShowWindow()
+    {
+        var window = EditorWindow.GetWindow&lt;FavoriteBarEditor&gt;(title: &quot;Favorites&quot;);
+        window.Show();
+    }
+
+    void OnEnable()
+    {
+        IsOpen = true;
+    }
+
+    void OnDisable()
+    {
+       IsOpen = false;
+    }
+}
+</code></pre>
+<p><img src="Assets/project-window-favorites.png" alt="Favorites in project window" /></p>
+<h2>Window styles</h2>
+<p>There are different styles that you can your windows as. The default style, shown above, is a resizable window that can be dragged arount and docked into the Unity editor like the inspetor or scene view.</p>
+<p>The different styles can be choosen replacing <code>window.Show()</code> from the above example with one of the follwing:</p>
+<ul>
+<li><code>Show()</code> --- Dockable window.</li>
+<li><code>ShowAsDropDown(Rect buttonRect, Vector2 windowSize)</code> --- Window will be displayed next to a specified area (like a button). Like the browser that opens when you click &quot;Add Component&quot; in the inspector.</li>
+<li><code>ShowAuxWindow()</code></li>
+<li><code>ShowPopup()</code> --- A window without frame, can't be resized or dragged.</li>
+<li><code>ShowUtility()</code> --- Resizable, dragable window. Not dockable. Invisible when not in foreground. Like the color picker.</li>
+</ul>
 
                 </div>
 

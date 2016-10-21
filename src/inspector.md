@@ -73,3 +73,19 @@ public class IntroPlayerEditor: Editor
 	}
 }
 ```
+
+## Constant redrawing
+
+If your editor needs to be repainted constantly, override `RequiresConstantRepaint` in your editor:
+
+```csharp
+public override bool RequiresConstantRepaint()
+{
+	return true;
+}
+```
+## Inspector width
+
+Sometimes you may need to know the width of the inspector view in order to calculate the positions of your widgets. __Don't use `Screen.width`__ for that. You can often find that online, but using `Screen.width` won't work well if Unity is running in HiDPI mode.
+
+Instead use `EditorGUIUtility.currentViewWidth`

@@ -7,5 +7,6 @@
 - [Menu Bar](./menu-bar.md)
 - [Windows](./windows.md)
 - [Preferences](./preferences.md)
+- [Events](./events.md)
 - [Scene Hierarchy View](./hierarchy.md)
 - [Project View](./project.md)

@@ -15,7 +15,7 @@ rev=$(git rev-parse --short HEAD)
 
 echo -e "${CYAN}Running mdbook build${NC}"
 # Run mdbook to generate the book
-/Users/pA/.multirust/toolchains/stable/cargo/bin/mdbook build .
+/Users/pA/.cargo/bin/mdbook build .
 
 #echo -e "${CYAN}Copying book to target/doc${NC}"
 # Copy files from rendered book to doc root

@@ -21,7 +21,7 @@ The most important events are `Layout` and `Repaint`.
 - Layout is called before any other event. `GUILayout` calls use this to initialize themselves. Layout events may occur multiple times in one frame.
 - Repaint is called only once at the end of a frame.
 
-## User iteraction
+## User interaction
 There is also `GUI.changed` which you can use to detect user interaction.
 
 ```csharp

@@ -47,7 +47,7 @@
         </script>
 
         <div id="sidebar" class="sidebar">
-            <ul class="chapter"><li><a href="./introduction.html"><strong>1.</strong> Introduction</a></li><li><a href="./inspector.html"><strong>2.</strong> Inspector</a></li><li><a href="./property-drawer.html"><strong>3.</strong> Property Drawer</a></li><li><a href="./component-context-menu.html"><strong>4.</strong> Component Context Menu</a></li><li><a href="./menu-bar.html" class="active"><strong>5.</strong> Menu Bar</a></li><li><a href="./windows.html"><strong>6.</strong> Windows</a></li><li><a href="./preferences.html"><strong>7.</strong> Preferences</a></li><li><a href="./events.html"><strong>8.</strong> Events</a></li><li><a href="./hierarchy.html"><strong>9.</strong> Scene Hierarchy View</a></li><li><a href="./project.html"><strong>10.</strong> Project View</a></li></ul>
+            <ul class="chapter"><li><a href="./introduction.html"><strong>1.</strong> Introduction</a></li><li><a href="./inspector.html"><strong>2.</strong> Inspector</a></li><li><a href="./property-drawer.html"><strong>3.</strong> Property Drawer</a></li><li><a href="./component-context-menu.html"><strong>4.</strong> Component Context Menu</a></li><li><a href="./menu-bar.html"><strong>5.</strong> Menu Bar</a></li><li><a href="./windows.html"><strong>6.</strong> Windows</a></li><li><a href="./preferences.html"><strong>7.</strong> Preferences</a></li><li><a href="./events.html" class="active"><strong>8.</strong> Events</a></li><li><a href="./hierarchy.html"><strong>9.</strong> Scene Hierarchy View</a></li><li><a href="./project.html"><strong>10.</strong> Project View</a></li></ul>
         </div>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -67,19 +67,37 @@
                 </div>
 
                 <div id="content" class="content">
-                    <h1>Menu Bar</h1>
-<p>You can put your own entries in the unity menu bar. Some paths have special meaning though, like the <code>Assets/Create/</code> path, where items in that path are also displayed in the <code>Create</code> section of the hierarchy view context menu.</p>
-<p><img src="Assets/menu-item-example.png" alt="Menu item example" /></p>
-<pre><code class="language-csharp">using UnityEngine;
-using UnityEditor;
-
-public static class MyMenuFunctionality
+                    <h1>Events</h1>
+<p>Unity calls your <code>OnGUI</code> kind of functions multiple times a frame to handle your GUI. For complex views, understanding Unity GUI Events can help you write more performant views.</p>
+<p>You can get the current event for the current <code>OnGUI</code> call with <code>Event.current</code>.</p>
+<pre><code class="language-csharp">private void OnGUI()
 {
-    [MenuItem(&quot;Assets/Create/Funny GameObject&quot;)]
-    private static void CreateFunnyGameObject()
+    var editorEvent = Event.current;
+    if (editorEventType == EventType.ScrollWheel)
     {
-        var gameObject = new GameObject(&quot;I'm fun.&quot;);
-        gameObject.transform.position = Vector3.zero;
+        var scrollDelta = editorEvent.delta;
+        // ...
+    }
+}
+</code></pre>
+<p>The most important events are <code>Layout</code> and <code>Repaint</code>.</p>
+<ul>
+<li>Layout is called before any other event. <code>GUILayout</code> calls use this to initialize themselves. Layout events may occur multiple times in one frame.</li>
+<li>Repaint is called only once at the end of a frame.</li>
+</ul>
+<h2>User iteraction</h2>
+<p>There is also <code>GUI.changed</code> which you can use to detect user interaction.</p>
+<pre><code class="language-csharp">private void OnGUI()
+{
+    var table = DrawTable(titles);
+    
+    if (GUI.changed)
+    {
+        // Users pressed something in the table.
+        // Get the index and do stuff
+        // once in a frame.
+        var index = table.SelectedIndex;
+        // ...
     }
 }
 </code></pre>
@@ -88,13 +106,13 @@ public static class MyMenuFunctionality
 
                 <!-- Mobile navigation buttons -->
                 
-                    <a href="./component-context-menu.html" class="mobile-nav-chapters previous">
+                    <a href="./preferences.html" class="mobile-nav-chapters previous">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="./windows.html" class="mobile-nav-chapters next">
+                    <a href="./hierarchy.html" class="mobile-nav-chapters next">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -102,13 +120,13 @@ public static class MyMenuFunctionality
             </div>
 
             
-                <a href="./component-context-menu.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                <a href="./preferences.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
                     <i class="fa fa-angle-left"></i>
                 </a>
             
 
             
-                <a href="./windows.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                <a href="./hierarchy.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
                     <i class="fa fa-angle-right"></i>
                 </a>
             

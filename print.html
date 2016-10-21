@@ -4,16 +4,18 @@
         <meta charset="UTF-8">
         <title>Unity Editor Extentions</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <meta name="description" content="{% block description %}{% endblock %}">
+        <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <base href="">
 
         <link rel="stylesheet" href="book.css">
-        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+        <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <link rel="shortcut icon" href="favicon.png">
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 
         <link rel="stylesheet" href="highlight.css">
         <link rel="stylesheet" href="tomorrow-night.css">
@@ -22,14 +24,14 @@
         <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
         <!-- Fetch JQuery from CDN but have a local fallback -->
-        <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
         <script>
             if (typeof jQuery == 'undefined') {
                 document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
             }
         </script>
     </head>
-    <body>
+    <body class="light">
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script type="text/javascript">
             var theme = localStorage.getItem('theme');
@@ -45,7 +47,7 @@
         </script>
 
         <div id="sidebar" class="sidebar">
-            <ul class="chapter"><li><a href="./introduction.html"><strong>1.</strong> Introduction</a></li><li><a href="./inspector.html"><strong>2.</strong> Inspector</a></li><li><a href="./property-drawer.html"><strong>3.</strong> Property Drawer</a></li><li><a href="./component-context-menu.html"><strong>4.</strong> Component Context Menu</a></li><li><a href="./menu-bar.html"><strong>5.</strong> Menu Bar</a></li><li><a href="./windows.html"><strong>6.</strong> Windows</a></li><li><a href="./preferences.html"><strong>7.</strong> Preferences</a></li><li><a href="./hierarchy.html"><strong>8.</strong> Scene Hierarchy View</a></li><li><a href="./project.html"><strong>9.</strong> Project View</a></li></ul>
+            <ul class="chapter"><li><a href="./introduction.html"><strong>1.</strong> Introduction</a></li><li><a href="./inspector.html"><strong>2.</strong> Inspector</a></li><li><a href="./property-drawer.html"><strong>3.</strong> Property Drawer</a></li><li><a href="./component-context-menu.html"><strong>4.</strong> Component Context Menu</a></li><li><a href="./menu-bar.html"><strong>5.</strong> Menu Bar</a></li><li><a href="./windows.html"><strong>6.</strong> Windows</a></li><li><a href="./preferences.html"><strong>7.</strong> Preferences</a></li><li><a href="./events.html"><strong>8.</strong> Events</a></li><li><a href="./hierarchy.html"><strong>9.</strong> Scene Hierarchy View</a></li><li><a href="./project.html"><strong>10.</strong> Project View</a></li></ul>
         </div>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -141,6 +143,16 @@ public class IntroPlayerEditor: Editor
     }
 }
 </code></pre>
+<h2>Constant redrawing</h2>
+<p>If your editor needs to be repainted constantly, override <code>RequiresConstantRepaint</code> in your editor:</p>
+<pre><code class="language-csharp">public override bool RequiresConstantRepaint()
+{
+    return true;
+}
+</code></pre>
+<h2>Inspector width</h2>
+<p>Sometimes you may need to know the width of the inspector view in order to calculate the positions of your widgets. <strong>Don't use <code>Screen.width</code></strong> for that. You can often find that online, but using <code>Screen.width</code> won't work well if Unity is running in HiDPI mode.</p>
+<p>Instead use <code>EditorGUIUtility.currentViewWidth</code></p>
 <h1>Property Drawer</h1>
 <p>Instead of creating a custom editor for a <code>MonoBehavior</code> or a <code>ScriptableObject</code> that replace the default UI completely, you can create a custom editor for a specific type and only fields of that type will use your custom UI, the remaining inspector will still be the default one.</p>
 <p><img src="Assets/property-drawer-wizzard-default.png" alt="Before, using the default Unity editor" />
@@ -465,6 +477,40 @@ public static class MyPreferences
 </code></pre>
 <p>Appart from using <code>EditorPrefs</code> you can also store your custom settings in an asset with an <code>ScriptableObject</code>. Keep in mind that the settings you edit inside an preference UI should only be for editor tools, like for example when you make a custom build extention for unity that lets you do special stuff when building a game. The advantage of using <code>EditorPrefs</code> is that your settings will be shared will all projects for your editor. Like all the other settings in the preference window.</p>
 <p>You should not put gameplay specific things in a preference UI.</p>
+<h1>Events</h1>
+<p>Unity calls your <code>OnGUI</code> kind of functions multiple times a frame to handle your GUI. For complex views, understanding Unity GUI Events can help you write more performant views.</p>
+<p>You can get the current event for the current <code>OnGUI</code> call with <code>Event.current</code>.</p>
+<pre><code class="language-csharp">private void OnGUI()
+{
+    var editorEvent = Event.current;
+    if (editorEventType == EventType.ScrollWheel)
+    {
+        var scrollDelta = editorEvent.delta;
+        // ...
+    }
+}
+</code></pre>
+<p>The most important events are <code>Layout</code> and <code>Repaint</code>.</p>
+<ul>
+<li>Layout is called before any other event. <code>GUILayout</code> calls use this to initialize themselves. Layout events may occur multiple times in one frame.</li>
+<li>Repaint is called only once at the end of a frame.</li>
+</ul>
+<h2>User iteraction</h2>
+<p>There is also <code>GUI.changed</code> which you can use to detect user interaction.</p>
+<pre><code class="language-csharp">private void OnGUI()
+{
+    var table = DrawTable(titles);
+    
+    if (GUI.changed)
+    {
+        // Users pressed something in the table.
+        // Get the index and do stuff
+        // once in a frame.
+        var index = table.SelectedIndex;
+        // ...
+    }
+}
+</code></pre>
 <h1>Scene Hierarchy View</h1>
 <p>You can customize the scene hierarchy view in the same way as the project view by registering a callback to <code>UnityEditor.EditorApplication.hierarchyWindowItemOnGUI</code>.</p>
 <p><img src="Assets/hierarchy-window-favorites.png" alt="Hierarchy window favorites" /></p>
@@ -629,6 +675,9 @@ public class FavoriteBarIcons
                 $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
             }
         </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
 
         <script src="highlight.js"></script>
         <script src="book.js"></script>
